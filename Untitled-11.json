@@ -1,0 +1,5 @@
+{
+  "sensor_id": "sensor_123",
+  "gas_type": "Carbon Monoxide",
+  "concentration": 100.0
+}
