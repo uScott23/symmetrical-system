@@ -1,0 +1,107 @@
+#include <WiFi.h>
+
+const char* ssid = "your_wifi_ssid";  // Replace with your WiFi SSID
+const char* password = "your_wifi_password";  // Replace with your WiFi password
+const int mq135Pin = A0;  // Analog input pin for MQ-135
+const float calibrationVoltage = 2.5;  // Calibration voltage from datasheet
+const float methaneThreshold = 100;  // ppm
+const float coThreshold = 50;  // ppm
+const float co2Threshold = 1000;  // ppm
+
+WiFiServer server(80);
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(mq135Pin, INPUT);
+  
+  // Connect to WiFi
+  Serial.println("Connecting to WiFi");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("...");
+  }
+  
+  Serial.println("Connected to WiFi");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+  
+  server.begin();
+}
+
+void loop() {
+  int sensorValue = analogRead(mq135Pin);
+  float voltage = sensorValue * (calibrationVoltage / 1024.0);
+  
+  // Calculate gas concentrations using calibration curves
+  float methaneConcentration = calculateMethane(voltage);
+  float coConcentration = calculateCO(voltage);
+  float co2Concentration = calculateCO2(voltage);
+  
+  // Check threshold values
+  if (methaneConcentration > methaneThreshold) {
+    Serial.println("Methane alert!");
+    sendAlert("Methane alert!");
+  }
+  if (coConcentration > coThreshold) {
+    Serial.println("CO alert!");
+    sendAlert("CO alert!");
+  }
+  if (co2Concentration > co2Threshold) {
+    Serial.println("CO2 alert!");
+    sendAlert("CO2 alert!");
+  }
+  
+  delay(1000);
+  
+  // Handle incoming client requests
+  WiFiClient client = server.available();
+  if (client) {
+    String request = client.readStringUntil('\r');
+    client.flush();
+    
+    // Send sensor data to client
+    client.println("HTTP/1.1 200 OK");
+    client.println("Content-Type: text/plain");
+    client.println("");
+    client.println("Methane: " + String(methaneConcentration) + " ppm");
+    client.println("CO: " + String(coConcentration) + " ppm");
+    client.println("CO2: " + String(co2Concentration) + " ppm");
+    
+    delay(10);
+    client.stop();
+  }
+}
+
+// Calibration curve functions (example)
+float calculateMethane(float voltage) {
+  return (voltage - 0.5) / 0.1;
+}
+
+float calculateCO(float voltage) {
+  return (voltage - 0.8) / 0.2;
+}
+
+float calculateCO2(float voltage) {
+  return (voltage - 1.2) / 0.3;
+}
+
+// Send alert via HTTP request
+void sendAlert(String message) {
+  WiFiClient client;
+  HTTPClient http;
+  
+  http.begin(client, "(link unavailable)");
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  
+  String postData = "message=" + message;
+  int httpResponseCode = http.POST(postData);
+  
+  http.end();
+}
+```
+String post Data = “message=“ + message;
+int httpResponseCode=
+http.POST(postData);
+
+you
